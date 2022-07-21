@@ -5,8 +5,8 @@ export default defineConfig({
 	build: {
 		lib: {
 			entry: resolve(__dirname, 'src/main.ts'),
-			name: 'BridgeSandbox',
-			fileName: (format) => `bridge-sandbox.${format}.js`,
+			name: 'BridgeJsRuntime',
+			fileName: (format) => `bridge-js-runtime.${format}.js`,
 		},
 		rollupOptions: {
 			external: [
