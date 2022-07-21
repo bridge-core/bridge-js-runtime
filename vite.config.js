@@ -11,7 +11,7 @@ export default defineConfig({
 		rollupOptions: {
 			external: [
 				'path-browserify',
-				'@swc/wasm',
+				'@swc/wasm-web',
 				'magic-string',
 				'typescript',
 			],
