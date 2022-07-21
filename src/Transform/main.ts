@@ -22,9 +22,10 @@ export function transform(jsContent: string, body: any, offset = 0) {
 			)
 		} else if (node.type === 'ExportDefaultExpression') {
 			// Replace "export default () => {...}" with "___module.__default__ = () => {...}"
+
 			overwrite(
 				node.span.start,
-				node.expression.span.start,
+				node.span.end,
 				`\n___module.__default__ = ${from(
 					node.expression.span.start,
 					node.expression.span.end

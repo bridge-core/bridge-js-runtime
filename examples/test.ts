@@ -1,5 +1,6 @@
 import Test, { x as y, y as z } from './default'
 import * as module from './default'
+import './stopWatch'
 
 export const x: number = 3
 export abstract class Test2 extends Test {}
