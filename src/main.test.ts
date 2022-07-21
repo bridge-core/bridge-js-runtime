@@ -1,8 +1,8 @@
-import { Runner } from './Runner'
+import { Runtime } from './Runtime'
 import { readFile } from 'fs/promises'
 import { expect, test } from 'vitest'
 
-class MyRunner extends Runner {
+class MyRunner extends Runtime {
 	readFile(filePath: string): Promise<string> {
 		return readFile(filePath, { encoding: 'utf8' })
 	}
@@ -19,6 +19,7 @@ class MyRunner extends Runner {
 const runner = new MyRunner()
 
 test('Runner.eval()', async () => {
-	expect(await runner.eval('./examples/test.ts')).toMatchObject({ x: 3 })
-	// expect(await runner.eval('./examples/default.ts')).toBe(undefined)
+	const module = await runner.eval('./examples/test.ts')
+	expect(module).toBeDefined()
+	expect(module.x).toBe(3)
 })

@@ -1,5 +1,5 @@
 export default class Test {
 	aMethod() {}
 }
-export const x = 1,
+export const x: number = 1,
 	y = 2

@@ -11,7 +11,7 @@ export function transform(jsContent: string, body: any, offset = 0) {
 
 	body.forEach((node: any) => {
 		if (node.type === 'ExportDefaultDeclaration') {
-			// Replace with "export default ..." with "___module.exports.__default__ = ..."
+			// Replace "export default ..." with "___module.exports.__default__ = ..."
 			overwrite(
 				node.span.start,
 				node.span.end,
@@ -21,7 +21,7 @@ export function transform(jsContent: string, body: any, offset = 0) {
 				)}`
 			)
 		} else if (node.type === 'ExportDeclaration') {
-			// Replace with "export ... name ..." with "... name = ...; ___module.exports.name = ..."
+			// Replace "export ... name ..." with "... name = ...; ___module.exports.name = ..."
 			overwrite(
 				node.span.start,
 				node.span.end,
@@ -48,14 +48,14 @@ export function transform(jsContent: string, body: any, offset = 0) {
 				node.specifiers.length === 1 &&
 				node.specifiers[0].type === 'ImportNamespaceSpecifier'
 			) {
-				// Replace with "import * as name from ..." with "const name = ___require(...)"
+				// Replace "import * as name from ..." with "const name = ___require(...)"
 				overwrite(
 					node.span.start,
 					node.span.end,
 					`const ${node.specifiers[0].local.value} = await ___require(${node.source.raw})`
 				)
 			} else {
-				// Replace with "import ... from ..." with "... = ___require(...)"
+				// Replace "import ... from ..." with "... = ___require(...)"
 				const allImports: string[] = []
 				node.specifiers.forEach((specifier: any) => {
 					if (specifier.type === 'ImportDefaultSpecifier') {
