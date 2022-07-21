@@ -1,13 +1,14 @@
 import init, { parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
-
+import wasmUrl from '@swc/wasm-web/wasm-web_bg.wasm?url'
 export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
 
-const loadedWasm = init().then(() => null)
+const loadedWasm = init(wasmUrl).then(() => null)
+
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, IModule>()
