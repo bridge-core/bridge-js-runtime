@@ -1,0 +1,42 @@
+{
+	"name": "dash-compiler",
+	"version": "0.8.19",
+	"description": "A fast compiler for Minecraft Add-Ons",
+	"scripts": {
+		"test": "vitest",
+		"build:types": "tsc --project tsconfig.json",
+		"build:only": "vite build",
+		"build": "vite build && npm run build:types"
+	},
+	"main": "./dist/dash-compiler.umd.js",
+	"module": "./dist/dash-compiler.es.js",
+	"types": "./dist/main.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/dash-compiler.es.js",
+			"require": "./dist/dash-compiler.umd.js"
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bridge-core/dash-compiler.git"
+	},
+	"author": "solvedDev",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/bridge-core/dash-compiler/issues"
+	},
+	"homepage": "https://github.com/bridge-core/dash-compiler#readme",
+	"dependencies": {
+		"@swc/wasm": "^1.2.205",
+		"acorn": "^8.7.1",
+		"magic-string": "^0.26.2",
+		"path-browserify": "^1.0.1",
+		"typescript": "^4.5.4",
+		"vitest": "^0.15.2"
+	},
+	"devDependencies": {
+		"@types/path-browserify": "^1.0.0",
+		"vite": "^2.6.13"
+	}
+}
