@@ -6,8 +6,8 @@ export function transform(jsContent: string, body: any, offset = 0) {
 		jsOutput.overwrite(s - offset, e - offset, str)
 	const from = (s: number, e: number) =>
 		jsOutput.slice(s - offset, e - offset)
-	const insert = (s: number, str: string) =>
-		jsOutput.appendRight(s - offset, str)
+
+	let appendExports = ''
 
 	body.forEach((node: any) => {
 		if (node.type === 'ExportDefaultDeclaration') {
@@ -15,20 +15,20 @@ export function transform(jsContent: string, body: any, offset = 0) {
 			overwrite(
 				node.span.start,
 				node.span.end,
-				`___module.__default__ = ${from(
+				`\n___module.__default__ = ${from(
 					node.decl.span.start,
 					node.decl.span.end
-				)}`
+				)};`
 			)
 		} else if (node.type === 'ExportDefaultExpression') {
 			// Replace "export default () => {...}" with "___module.__default__ = () => {...}"
 			overwrite(
 				node.span.start,
-				node.span.end,
-				`___module.__default__ = ${from(
+				node.expression.span.start,
+				`\n___module.__default__ = ${from(
 					node.expression.span.start,
 					node.expression.span.end
-				)}`
+				)};`
 			)
 		} else if (node.type === 'ExportDeclaration') {
 			// Replace "export ... name ..." with "... name = ...; ___module.name = ..."
@@ -37,22 +37,27 @@ export function transform(jsContent: string, body: any, offset = 0) {
 				node.span.end,
 				from(node.declaration.span.start, node.declaration.span.end)
 			)
+
 			if (
 				node.declaration.type === 'ClassDeclaration' ||
 				node.declaration.type === 'FunctionDeclaration'
 			) {
-				insert(
-					node.span.end,
-					`\n___module.${node.declaration.identifier.value} = ${node.declaration.identifier.value}`
-				)
+				appendExports += `\n___module.${node.declaration.identifier.value} = ${node.declaration.identifier.value};`
 			} else if (node.declaration.type === 'VariableDeclaration') {
 				node.declaration.declarations.forEach((decl: any) => {
-					insert(
-						node.span.end,
-						`\n___module.${decl.id.value} = ${decl.id.value}`
-					)
+					appendExports += `\n___module.${decl.id.value} = ${decl.id.value};`
 				})
 			}
+		} else if (node.type === 'ExportNamedDeclaration') {
+			let newExports = ''
+			for (const { orig, exported } of node.specifiers) {
+				if (exported.value === 'default')
+					newExports += `\n___module.__default__ = ${orig.value};`
+				else
+					newExports += `\n___module.${exported.value} = ${orig.value};`
+			}
+
+			overwrite(node.span.start, node.span.end, newExports)
 		} else if (node.type === 'ImportDeclaration') {
 			if (
 				node.specifiers.length === 1 &&
@@ -62,7 +67,7 @@ export function transform(jsContent: string, body: any, offset = 0) {
 				overwrite(
 					node.span.start,
 					node.span.end,
-					`const ${node.specifiers[0].local.value} = await ___require(${node.source.raw})`
+					`\nconst ${node.specifiers[0].local.value} = await ___require(${node.source.raw});`
 				)
 			} else {
 				// Replace "import ... from ..." with "... = ___require(...)"
@@ -76,17 +81,17 @@ export function transform(jsContent: string, body: any, offset = 0) {
 						)
 					}
 				})
+				const importText =
+					allImports.length === 0
+						? `\nawait ___require(${node.source.raw});`
+						: `\nconst {${allImports.join(
+								', '
+						  )}} = await ___require(${node.source.raw});`
 
-				overwrite(
-					node.span.start,
-					node.span.end,
-					`const {${allImports.join(', ')}} = await ___require(${
-						node.source.raw
-					})`
-				)
+				overwrite(node.span.start, node.span.end, importText)
 			}
 		}
 	})
 
-	return jsOutput.toString()
+	return jsOutput.toString() + appendExports
 }

@@ -1,4 +1,4 @@
-import init, { parseSync, transformSync } from '@swc/wasm-web'
+import init, { minifySync, parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
 import wasmUrl from '@swc/wasm-web/wasm-web_bg.wasm?url'
@@ -8,8 +8,7 @@ export interface IModule {
 	[key: string]: any
 }
 
-let loadedWasm: any
-if (import.meta.env.PROD) loadedWasm = init(wasmUrl).then(() => null)
+const loadedWasm = init(wasmUrl).then(() => null)
 
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
@@ -48,40 +47,48 @@ export abstract class Runtime {
 		if (evaluatedModule) return evaluatedModule
 
 		const fileDirName = dirname(filePath)
+		const syntax = filePath.endsWith('.js') ? 'ecmascript' : 'typescript'
+
 		if (!fileContent)
 			fileContent = await this.readFile(filePath).catch(() => undefined)
 		if (!fileContent) throw new Error(`File "${filePath}" not found`)
 
 		await this.init
 
-		const { type, body } = parseSync(fileContent, {
-			syntax: filePath.endsWith('.js') ? 'ecmascript' : 'typescript',
+		let transpiledSource = minifySync(
+			transformSync(fileContent, {
+				filename: basename(filePath),
+
+				jsc: {
+					parser: {
+						syntax,
+						preserveAllComments: false,
+						topLevelAwait: true,
+					},
+					target: 'es2020',
+				},
+			}).code,
+			{ compress: false, mangle: false, format: { beautify: true } }
+		).code
+
+		const { type, body } = parseSync(transpiledSource, {
+			syntax,
 
 			target: 'es2022',
 		})
 
 		const transformOffset: number = body[0].span.start
-		const transformedSource = transform(fileContent, body, transformOffset)
-
-		let transpiledSource = transformedSource
-		if (filePath.endsWith('.ts')) {
-			transpiledSource = transformSync(transformedSource, {
-				filename: basename(filePath),
-
-				jsc: {
-					parser: {
-						syntax: 'typescript',
-					},
-					target: 'es2020',
-				},
-			}).code
-		}
+		const transformedSource = transform(
+			transpiledSource,
+			body,
+			transformOffset
+		)
 
 		const module: IModule = {}
 
 		try {
 			await this.runSrc(
-				transpiledSource,
+				transformedSource,
 				Object.assign({}, this.env, {
 					___module: module,
 					___require: (moduleName: string) =>

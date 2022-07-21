@@ -7,7 +7,7 @@ export declare abstract class Runtime {
     protected baseModules: Map<string, IModule>;
     protected env: Record<string, any>;
     abstract readFile(filePath: string): Promise<string>;
-    readonly init: any;
+    readonly init: Promise<null>;
     constructor(modules?: [string, IModule][]);
     run(filePath: string, env?: Record<string, any>, fileContent?: string): Promise<IModule>;
     clearCache(): void;

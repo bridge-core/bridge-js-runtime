@@ -1,3 +1,5 @@
+import './convertObj'
+
 export default class Test {
 	aMethod() {}
 }
