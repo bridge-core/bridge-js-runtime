@@ -3,3 +3,5 @@ export default class Test {
 }
 export const x: number = 1,
 	y = 2
+
+export function aFunction() {}

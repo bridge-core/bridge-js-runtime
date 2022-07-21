@@ -11,17 +11,27 @@ export function transform(jsContent: string, body: any, offset = 0) {
 
 	body.forEach((node: any) => {
 		if (node.type === 'ExportDefaultDeclaration') {
-			// Replace "export default ..." with "___module.exports.__default__ = ..."
+			// Replace "export default ..." with "___module.__default__ = ..."
 			overwrite(
 				node.span.start,
 				node.span.end,
-				`___module.exports.__default__ = ${from(
+				`___module.__default__ = ${from(
 					node.decl.span.start,
 					node.decl.span.end
 				)}`
 			)
+		} else if (node.type === 'ExportDefaultExpression') {
+			// Replace "export default () => {...}" with "___module.__default__ = () => {...}"
+			overwrite(
+				node.span.start,
+				node.span.end,
+				`___module.__default__ = ${from(
+					node.expression.span.start,
+					node.expression.span.end
+				)}`
+			)
 		} else if (node.type === 'ExportDeclaration') {
-			// Replace "export ... name ..." with "... name = ...; ___module.exports.name = ..."
+			// Replace "export ... name ..." with "... name = ...; ___module.name = ..."
 			overwrite(
 				node.span.start,
 				node.span.end,
@@ -33,13 +43,13 @@ export function transform(jsContent: string, body: any, offset = 0) {
 			) {
 				insert(
 					node.span.end,
-					`\n___module.exports.${node.declaration.identifier.value} = ${node.declaration.identifier.value}`
+					`\n___module.${node.declaration.identifier.value} = ${node.declaration.identifier.value}`
 				)
 			} else if (node.declaration.type === 'VariableDeclaration') {
 				node.declaration.declarations.forEach((decl: any) => {
 					insert(
 						node.span.end,
-						`\n___module.exports.${decl.id.value} = ${decl.id.value}`
+						`\n___module.${decl.id.value} = ${decl.id.value}`
 					)
 				})
 			}

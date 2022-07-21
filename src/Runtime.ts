@@ -2,12 +2,14 @@ import init, { parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
 import wasmUrl from '@swc/wasm-web/wasm-web_bg.wasm?url'
+
 export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
 
-const loadedWasm = init(wasmUrl).then(() => null)
+let loadedWasm: any
+if (import.meta.env.PROD) loadedWasm = init().then(() => null)
 
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
@@ -75,7 +77,7 @@ export abstract class Runtime {
 			}).code
 		}
 
-		const module: { exports: IModule } = { exports: {} }
+		const module: IModule = {}
 
 		try {
 			await this.runSrc(
@@ -91,7 +93,7 @@ export abstract class Runtime {
 		}
 
 		this.evaluatedModules.set(filePath, module)
-		return module.exports
+		return module
 	}
 
 	protected async require(moduleName: string, baseDir: string) {
