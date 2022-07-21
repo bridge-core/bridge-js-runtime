@@ -9,7 +9,7 @@ export interface IModule {
 }
 
 let loadedWasm: any
-if (import.meta.env.PROD) loadedWasm = init().then(() => null)
+if (import.meta.env.PROD) loadedWasm = init(wasmUrl).then(() => null)
 
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
