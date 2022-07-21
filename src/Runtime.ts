@@ -6,11 +6,14 @@ export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
+
+const loadedWasm = init().then(() => null)
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, IModule>()
 	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<string>
+	public readonly init = loadedWasm
 
 	constructor(modules?: [string, IModule][]) {
 		if (modules) {
@@ -46,7 +49,8 @@ export abstract class Runtime {
 			fileContent = await this.readFile(filePath).catch(() => undefined)
 		if (!fileContent) throw new Error(`File "${filePath}" not found`)
 
-		await init
+		await this.init
+
 		const { type, body } = parseSync(fileContent, {
 			syntax: filePath.endsWith('.js') ? 'ecmascript' : 'typescript',
 

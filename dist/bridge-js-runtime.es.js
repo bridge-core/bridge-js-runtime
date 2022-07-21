@@ -38,11 +38,13 @@ ___module.exports.${decl.id.value} = ${decl.id.value}`);
   });
   return jsOutput.toString();
 }
+const loadedWasm = init().then(() => null);
 class Runtime {
   constructor(modules) {
     this.evaluatedModules = /* @__PURE__ */ new Map();
     this.baseModules = /* @__PURE__ */ new Map();
     this.env = {};
+    this.init = loadedWasm;
     if (modules) {
       for (const [moduleName, module] of modules) {
         this.registerModule(moduleName, module);
@@ -69,7 +71,7 @@ class Runtime {
       fileContent = await this.readFile(filePath).catch(() => void 0);
     if (!fileContent)
       throw new Error(`File "${filePath}" not found`);
-    await init;
+    await this.init;
     const { type, body } = parseSync(fileContent, {
       syntax: filePath.endsWith(".js") ? "ecmascript" : "typescript",
       target: "es2022"
