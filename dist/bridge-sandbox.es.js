@@ -42,6 +42,12 @@ class Runtime {
   constructor() {
     this.evaluatedModules = /* @__PURE__ */ new Map();
     this.baseModules = /* @__PURE__ */ new Map();
+    this.env = {};
+  }
+  async run(filePath, env = {}) {
+    this.env = env;
+    const module = await this.eval(filePath);
+    return module;
   }
   async eval(filePath, fileContent) {
     const evaluatedModule = this.evaluatedModules.get(filePath);
@@ -73,10 +79,10 @@ class Runtime {
     }
     const module = { exports: {} };
     try {
-      await this.run(transpiledSource, {
+      await this.runSrc(transpiledSource, Object.assign({}, this.env, {
         ___module: module,
         ___require: (moduleName) => this.require(moduleName, fileDirName)
-      });
+      }));
     } catch (err) {
       throw new Error(`Error in ${filePath}: ${err}`);
     }
@@ -87,6 +93,11 @@ class Runtime {
     const baseModule = this.baseModules.get(moduleName);
     if (baseModule)
       return baseModule;
+    if (moduleName.startsWith("https://")) {
+      const response = await fetch(moduleName);
+      const text = await response.text();
+      return this.eval(moduleName, text);
+    }
     if (moduleName.startsWith("."))
       moduleName = join(baseDir, moduleName);
     const extensions = [".ts", ".js"];
@@ -99,7 +110,7 @@ class Runtime {
     }
     throw new Error(`Module "${moduleName}" not found`);
   }
-  async run(src, env) {
+  async runSrc(src, env) {
     return new Function(...Object.keys(env), `return (async () => {
 ${src}
 })()`)(...Object.values(env));

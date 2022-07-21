@@ -9,11 +9,17 @@ export interface IModule {
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, IModule>()
+	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<string>
 
-	constructor() {}
+	async run(filePath: string, env: Record<string, any> = {}) {
+		this.env = env
 
-	async eval(filePath: string, fileContent?: string) {
+		const module = await this.eval(filePath)
+		return module
+	}
+
+	protected async eval(filePath: string, fileContent?: string) {
 		const evaluatedModule = this.evaluatedModules.get(filePath)
 		if (evaluatedModule) return evaluatedModule
 
@@ -49,11 +55,14 @@ export abstract class Runtime {
 		const module: { exports: IModule } = { exports: {} }
 
 		try {
-			await this.run(transpiledSource, {
-				___module: module,
-				___require: (moduleName: string) =>
-					this.require(moduleName, fileDirName),
-			})
+			await this.runSrc(
+				transpiledSource,
+				Object.assign({}, this.env, {
+					___module: module,
+					___require: (moduleName: string) =>
+						this.require(moduleName, fileDirName),
+				})
+			)
 		} catch (err: any) {
 			throw new Error(`Error in ${filePath}: ${err}`)
 		}
@@ -62,9 +71,16 @@ export abstract class Runtime {
 		return module.exports
 	}
 
-	async require(moduleName: string, baseDir: string) {
+	protected async require(moduleName: string, baseDir: string) {
 		const baseModule = this.baseModules.get(moduleName)
 		if (baseModule) return baseModule
+
+		// Fetch module from network
+		if (moduleName.startsWith('https://')) {
+			const response = await fetch(moduleName)
+			const text = await response.text()
+			return this.eval(moduleName, text)
+		}
 
 		if (moduleName.startsWith('.')) moduleName = join(baseDir, moduleName)
 
@@ -82,7 +98,7 @@ export abstract class Runtime {
 		throw new Error(`Module "${moduleName}" not found`)
 	}
 
-	async run(src: string, env: Record<string, any>) {
+	protected async runSrc(src: string, env: Record<string, any>) {
 		return new Function(
 			...Object.keys(env),
 			`return (async () => {\n${src}\n})()`

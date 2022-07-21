@@ -19,7 +19,7 @@ class MyRunner extends Runtime {
 const runner = new MyRunner()
 
 test('Runner.eval()', async () => {
-	const module = await runner.eval('./examples/test.ts')
+	const module = await runner.run('./examples/test.ts')
 	expect(module).toBeDefined()
 	expect(module.x).toBe(3)
 })
