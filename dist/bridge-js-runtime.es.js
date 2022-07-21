@@ -49,9 +49,9 @@ class Runtime {
       }
     }
   }
-  async run(filePath, env = {}) {
+  async run(filePath, env = {}, fileContent) {
     this.env = env;
-    const module = await this.eval(filePath);
+    const module = await this.eval(filePath, fileContent);
     return module;
   }
   clearCache() {

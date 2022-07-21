@@ -20,10 +20,14 @@ export abstract class Runtime {
 		}
 	}
 
-	async run(filePath: string, env: Record<string, any> = {}) {
+	async run(
+		filePath: string,
+		env: Record<string, any> = {},
+		fileContent?: string
+	) {
 		this.env = env
 
-		const module = await this.eval(filePath)
+		const module = await this.eval(filePath, fileContent)
 		return module
 	}
 	clearCache() {
