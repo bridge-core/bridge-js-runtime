@@ -1,6 +1,6 @@
 {
 	"name": "bridge-js-runtime",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"description": "A fast compiler for Minecraft Add-Ons",
 	"scripts": {
 		"test": "vitest",
@@ -28,7 +28,7 @@
 	},
 	"homepage": "https://github.com/bridge-core/bridge-sandbox#readme",
 	"dependencies": {
-		"@swc/wasm": "^1.2.205",
+		"@swc/wasm-web": "^1.2.218",
 		"magic-string": "^0.26.2",
 		"path-browserify": "^1.0.1",
 		"vitest": "^0.15.2"

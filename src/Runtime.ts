@@ -1,4 +1,4 @@
-import init, { parseSync, transformSync } from '@swc/wasm'
+import init, { parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
 
