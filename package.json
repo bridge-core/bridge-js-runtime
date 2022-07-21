@@ -1,5 +1,5 @@
 {
-	"name": "bridge-sandbox",
+	"name": "bridge-js-runtime",
 	"version": "0.1.0",
 	"description": "A fast compiler for Minecraft Add-Ons",
 	"scripts": {
@@ -8,13 +8,13 @@
 		"build:only": "vite build",
 		"build": "vite build && npm run build:types"
 	},
-	"main": "./dist/bridge-sandbox.umd.js",
-	"module": "./dist/bridge-sandbox.es.js",
+	"main": "./dist/bridge-js-runtime.umd.js",
+	"module": "./dist/bridge-js-runtime.es.js",
 	"types": "./dist/main.d.ts",
 	"exports": {
 		".": {
-			"import": "./dist/bridge-sandbox.es.js",
-			"require": "./dist/bridge-sandbox.umd.js"
+			"import": "./dist/bridge-js-runtime.es.js",
+			"require": "./dist/bridge-js-runtime.umd.js"
 		}
 	},
 	"repository": {
