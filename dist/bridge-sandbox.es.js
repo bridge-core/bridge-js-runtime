@@ -39,15 +39,26 @@ ___module.exports.${decl.id.value} = ${decl.id.value}`);
   return jsOutput.toString();
 }
 class Runtime {
-  constructor() {
+  constructor(modules) {
     this.evaluatedModules = /* @__PURE__ */ new Map();
     this.baseModules = /* @__PURE__ */ new Map();
     this.env = {};
+    if (modules) {
+      for (const [moduleName, module] of modules) {
+        this.registerModule(moduleName, module);
+      }
+    }
   }
   async run(filePath, env = {}) {
     this.env = env;
     const module = await this.eval(filePath);
     return module;
+  }
+  clearCache() {
+    this.evaluatedModules.clear();
+  }
+  registerModule(moduleName, module) {
+    this.baseModules.set(moduleName, module);
   }
   async eval(filePath, fileContent) {
     const evaluatedModule = this.evaluatedModules.get(filePath);

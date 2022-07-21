@@ -12,11 +12,25 @@ export abstract class Runtime {
 	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<string>
 
+	constructor(modules?: [string, IModule][]) {
+		if (modules) {
+			for (const [moduleName, module] of modules) {
+				this.registerModule(moduleName, module)
+			}
+		}
+	}
+
 	async run(filePath: string, env: Record<string, any> = {}) {
 		this.env = env
 
 		const module = await this.eval(filePath)
 		return module
+	}
+	clearCache() {
+		this.evaluatedModules.clear()
+	}
+	registerModule(moduleName: string, module: IModule) {
+		this.baseModules.set(moduleName, module)
 	}
 
 	protected async eval(filePath: string, fileContent?: string) {
