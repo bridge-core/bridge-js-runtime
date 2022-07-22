@@ -29,4 +29,7 @@ test('Runner.run()', async () => {
 	const module2 = await runner.run('./examples/convertObj.js')
 	expect(module2).toBeDefined()
 	expect(module2.__default__).toBeTypeOf('function')
+
+	const defaultModule = await runner.run('./examples/default.ts')
+	console.log(defaultModule)
 })

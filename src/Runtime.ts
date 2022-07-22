@@ -7,14 +7,15 @@ export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
+export type TBaseModule = IModule | (() => IModule) | (() => Promise<IModule>)
 
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
-	protected baseModules = new Map<string, IModule>()
+	protected baseModules = new Map<string, TBaseModule>()
 	protected env: Record<string, any> = {}
-	abstract readFile(filePath: string): Promise<string>
+	protected abstract readFile(filePath: string): Promise<string>
 
-	constructor(modules?: [string, IModule][]) {
+	constructor(modules?: [string, TBaseModule][]) {
 		if (modules) {
 			for (const [moduleName, module] of modules) {
 				this.registerModule(moduleName, module)
@@ -35,7 +36,7 @@ export abstract class Runtime {
 	clearCache() {
 		this.evaluatedModules.clear()
 	}
-	registerModule(moduleName: string, module: IModule) {
+	registerModule(moduleName: string, module: TBaseModule) {
 		this.baseModules.set(moduleName, module)
 	}
 
@@ -107,13 +108,16 @@ export abstract class Runtime {
 
 	protected async require(moduleName: string, baseDir: string) {
 		const baseModule = this.baseModules.get(moduleName)
-		if (baseModule) return baseModule
+		if (baseModule)
+			return typeof baseModule === 'function'
+				? await baseModule()
+				: baseModule
 
 		// Fetch module from network
 		if (moduleName.startsWith('https://')) {
 			const response = await fetch(moduleName)
 			const text = await response.text()
-			return this.eval(moduleName, text)
+			return await this.eval(moduleName, text)
 		}
 
 		if (moduleName.startsWith('.')) moduleName = join(baseDir, moduleName)
@@ -133,7 +137,7 @@ export abstract class Runtime {
 					)
 				}
 
-				return {
+				return <IModule>{
 					__default__: json,
 					...json,
 				}

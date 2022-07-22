@@ -128,11 +128,11 @@ class Runtime {
   async require(moduleName, baseDir) {
     const baseModule = this.baseModules.get(moduleName);
     if (baseModule)
-      return baseModule;
+      return typeof baseModule === "function" ? await baseModule() : baseModule;
     if (moduleName.startsWith("https://")) {
       const response = await fetch(moduleName);
       const text = await response.text();
-      return this.eval(moduleName, text);
+      return await this.eval(moduleName, text);
     }
     if (moduleName.startsWith("."))
       moduleName = join(baseDir, moduleName);

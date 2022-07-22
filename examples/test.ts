@@ -1,7 +1,8 @@
-import Test, { x as y, y as z } from './default'
+import Test, { x as y, y as z, TType } from './default'
 import * as module from './default'
 import './stopWatch'
 import { cooldownTime } from './global.json'
+import type { IInterface } from './default'
 
 export const x: number = 3
 export abstract class Test2 extends Test {}
