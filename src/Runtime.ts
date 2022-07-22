@@ -1,21 +1,18 @@
-import init, { minifySync, parseSync, transformSync } from '@swc/wasm-web'
+import { minifySync, parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
-import wasmUrl from '@swc/wasm-web/wasm-web_bg.wasm?url'
+import { loadedWasm } from './main'
 
 export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
 
-const loadedWasm = init(wasmUrl).then(() => null)
-
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, IModule>()
 	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<string>
-	public readonly init = loadedWasm
 
 	constructor(modules?: [string, IModule][]) {
 		if (modules) {
@@ -53,7 +50,12 @@ export abstract class Runtime {
 			fileContent = await this.readFile(filePath).catch(() => undefined)
 		if (!fileContent) throw new Error(`File "${filePath}" not found`)
 
-		await this.init
+		if (loadedWasm === null) {
+			throw new Error(
+				`You must call initRuntimes() before using the runtime`
+			)
+		}
+		await loadedWasm
 
 		let transpiledSource = minifySync(
 			transformSync(fileContent, {

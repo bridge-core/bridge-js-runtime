@@ -8,13 +8,9 @@ export default defineConfig({
 			name: 'BridgeJsRuntime',
 			fileName: (format) => `bridge-js-runtime.${format}.js`,
 		},
+		assetsInlineLimit: 0,
 		rollupOptions: {
-			external: [
-				'path-browserify',
-				'@swc/wasm-web',
-				'magic-string',
-				'typescript',
-			],
+			external: ['path-browserify', '@swc/wasm-web', 'magic-string'],
 		},
 	},
 })
