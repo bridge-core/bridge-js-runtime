@@ -77,6 +77,9 @@ export function transform(jsContent: string, body: any, offset = 0) {
 					if (specifier.type === 'ImportDefaultSpecifier') {
 						allImports.push(`__default__: ${specifier.local.value}`)
 					} else if (specifier.type === 'ImportSpecifier') {
+						if (!specifier.imported)
+							specifier.imported = specifier.local
+
 						allImports.push(
 							`${specifier.imported.value}: ${specifier.local.value}`
 						)

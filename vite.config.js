@@ -10,7 +10,12 @@ export default defineConfig({
 		},
 		assetsInlineLimit: 0,
 		rollupOptions: {
-			external: ['path-browserify', '@swc/wasm-web', 'magic-string'],
+			external: [
+				'path-browserify',
+				'@swc/wasm-web',
+				'magic-string',
+				'json5',
+			],
 		},
 	},
 })

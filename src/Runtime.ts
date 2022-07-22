@@ -2,7 +2,7 @@ import { minifySync, parseSync, transformSync } from '@swc/wasm-web'
 import { dirname, join, basename } from 'path-browserify'
 import { transform } from './Transform/main'
 import { loadedWasm } from './main'
-
+import json5 from 'json5'
 export interface IModule {
 	__default__?: any
 	[key: string]: any
@@ -50,7 +50,7 @@ export abstract class Runtime {
 			fileContent = await this.readFile(filePath).catch(() => undefined)
 		if (!fileContent) throw new Error(`File "${filePath}" not found`)
 
-		if (loadedWasm === null) {
+		if (loadedWasm === null && import.meta.env.PROD) {
 			throw new Error(
 				`You must call initRuntimes() before using the runtime`
 			)
@@ -118,11 +118,33 @@ export abstract class Runtime {
 
 		if (moduleName.startsWith('.')) moduleName = join(baseDir, moduleName)
 
+		// Load JSON files
+		if (moduleName.endsWith('.json')) {
+			const fileContent = await this.readFile(moduleName).catch(
+				() => undefined
+			)
+			if (fileContent) {
+				let json: any = {}
+				try {
+					json = json5.parse(fileContent)
+				} catch {
+					throw new Error(
+						`File "${moduleName}" contains invalid JSON`
+					)
+				}
+
+				return {
+					__default__: json,
+					...json,
+				}
+			}
+		}
+
 		const extensions = ['.ts', '.js']
 
 		for (const ext of extensions) {
 			const filePath = `${moduleName}${ext}`
-			const fileContent = await this.readFile(filePath).catch(
+			let fileContent = await this.readFile(filePath).catch(
 				() => undefined
 			)
 			if (!fileContent) continue

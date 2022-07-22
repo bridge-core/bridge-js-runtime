@@ -1,6 +1,7 @@
 import init, { minifySync, transformSync, parseSync } from "@swc/wasm-web";
 import { dirname, join, basename } from "path-browserify";
 import MagicString from "magic-string";
+import json5 from "json5";
 function transform(jsContent, body, offset = 0) {
   const jsOutput = new MagicString(jsContent);
   const overwrite = (s, e, str) => jsOutput.overwrite(s - offset, e - offset, str);
@@ -45,6 +46,8 @@ const ${node.specifiers[0].local.value} = await ___require(${node.source.raw});`
           if (specifier.type === "ImportDefaultSpecifier") {
             allImports.push(`__default__: ${specifier.local.value}`);
           } else if (specifier.type === "ImportSpecifier") {
+            if (!specifier.imported)
+              specifier.imported = specifier.local;
             allImports.push(`${specifier.imported.value}: ${specifier.local.value}`);
           }
         });
@@ -89,7 +92,7 @@ class Runtime {
       fileContent = await this.readFile(filePath).catch(() => void 0);
     if (!fileContent)
       throw new Error(`File "${filePath}" not found`);
-    if (loadedWasm === null) {
+    if (loadedWasm === null && true) {
       throw new Error(`You must call initRuntimes() before using the runtime`);
     }
     await loadedWasm;
@@ -133,10 +136,25 @@ class Runtime {
     }
     if (moduleName.startsWith("."))
       moduleName = join(baseDir, moduleName);
+    if (moduleName.endsWith(".json")) {
+      const fileContent = await this.readFile(moduleName).catch(() => void 0);
+      if (fileContent) {
+        let json = {};
+        try {
+          json = json5.parse(fileContent);
+        } catch {
+          throw new Error(`File "${moduleName}" contains invalid JSON`);
+        }
+        return {
+          __default__: json,
+          ...json
+        };
+      }
+    }
     const extensions = [".ts", ".js"];
     for (const ext of extensions) {
       const filePath = `${moduleName}${ext}`;
-      const fileContent = await this.readFile(filePath).catch(() => void 0);
+      let fileContent = await this.readFile(filePath).catch(() => void 0);
       if (!fileContent)
         continue;
       return await this.eval(filePath, fileContent);

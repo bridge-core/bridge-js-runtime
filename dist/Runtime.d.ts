@@ -12,6 +12,6 @@ export declare abstract class Runtime {
     clearCache(): void;
     registerModule(moduleName: string, module: IModule): void;
     protected eval(filePath: string, fileContent?: string): Promise<IModule>;
-    protected require(moduleName: string, baseDir: string): Promise<IModule>;
+    protected require(moduleName: string, baseDir: string): Promise<any>;
     protected runSrc(src: string, env: Record<string, any>): Promise<any>;
 }
