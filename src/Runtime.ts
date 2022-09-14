@@ -9,6 +9,7 @@ export interface IModule {
 }
 export type TBaseModule = IModule | (() => IModule) | (() => Promise<IModule>)
 
+const isNode = typeof process !== 'undefined' && process.release.name === 'node'
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
@@ -39,6 +40,9 @@ export abstract class Runtime {
 	registerModule(moduleName: string, module: TBaseModule) {
 		this.baseModules.set(moduleName, module)
 	}
+	deleteModule(moduleName: string) {
+		this.baseModules.delete(moduleName)
+	}
 
 	protected async eval(filePath: string, fileContent?: string) {
 		const evaluatedModule = this.evaluatedModules.get(filePath)
@@ -51,7 +55,7 @@ export abstract class Runtime {
 			fileContent = await this.readFile(filePath).catch(() => undefined)
 		if (!fileContent) throw new Error(`File "${filePath}" not found`)
 
-		if (loadedWasm === null && import.meta.env.PROD) {
+		if (loadedWasm === null && !isNode) {
 			throw new Error(
 				`You must call initRuntimes() before using the runtime`
 			)

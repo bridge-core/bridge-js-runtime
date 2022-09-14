@@ -1,5 +1,5 @@
 import init, { minifySync, transformSync, parseSync } from "@swc/wasm-web";
-import { dirname, join, basename } from "path-browserify";
+import { dirname, basename, join } from "path-browserify";
 import MagicString from "magic-string";
 import json5 from "json5";
 function transform(jsContent, body, offset = 0) {
@@ -60,6 +60,7 @@ const {${allImports.join(", ")}} = await ___require(${node.source.raw});`;
   });
   return jsOutput.toString() + appendExports;
 }
+const isNode = typeof process !== "undefined" && process.release.name === "node";
 class Runtime {
   constructor(modules) {
     this.evaluatedModules = /* @__PURE__ */ new Map();
@@ -82,6 +83,9 @@ class Runtime {
   registerModule(moduleName, module) {
     this.baseModules.set(moduleName, module);
   }
+  deleteModule(moduleName) {
+    this.baseModules.delete(moduleName);
+  }
   async eval(filePath, fileContent) {
     const evaluatedModule = this.evaluatedModules.get(filePath);
     if (evaluatedModule)
@@ -92,7 +96,7 @@ class Runtime {
       fileContent = await this.readFile(filePath).catch(() => void 0);
     if (!fileContent)
       throw new Error(`File "${filePath}" not found`);
-    if (loadedWasm === null && true) {
+    if (loadedWasm === null && !isNode) {
       throw new Error(`You must call initRuntimes() before using the runtime`);
     }
     await loadedWasm;

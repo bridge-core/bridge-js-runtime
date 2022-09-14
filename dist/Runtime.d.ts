@@ -12,6 +12,7 @@ export declare abstract class Runtime {
     run(filePath: string, env?: Record<string, any>, fileContent?: string): Promise<IModule>;
     clearCache(): void;
     registerModule(moduleName: string, module: TBaseModule): void;
+    deleteModule(moduleName: string): void;
     protected eval(filePath: string, fileContent?: string): Promise<IModule>;
     protected require(moduleName: string, baseDir: string): Promise<IModule>;
     protected runSrc(src: string, env: Record<string, any>): Promise<any>;
