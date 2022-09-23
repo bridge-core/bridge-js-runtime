@@ -1,8 +1,9 @@
 import { minifySync, parseSync, transformSync } from '@swc/wasm-web'
-import { dirname, join, basename } from 'path-browserify'
+import { dirname, join, basename, extname } from 'path-browserify'
 import { transform } from './Transform/main'
 import { loadedWasm } from './main'
 import json5 from 'json5'
+import { Module } from './Module'
 export interface IModule {
 	__default__?: any
 	[key: string]: any
@@ -13,6 +14,11 @@ const isNode = typeof process !== 'undefined' && process.release.name === 'node'
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
+	protected moduleLoaders = new Map<
+		string,
+		(filePath: string) => string | Module
+	>()
+
 	protected env: Record<string, any> = {}
 	protected abstract readFile(filePath: string): Promise<string>
 
@@ -29,9 +35,7 @@ export abstract class Runtime {
 		env: Record<string, any> = {},
 		fileContent?: string
 	) {
-		this.env = env
-
-		const module = await this.eval(filePath, fileContent)
+		const module = await this.eval(filePath, env, fileContent)
 		return module
 	}
 	clearCache() {
@@ -44,7 +48,24 @@ export abstract class Runtime {
 		this.baseModules.delete(moduleName)
 	}
 
-	protected async eval(filePath: string, fileContent?: string) {
+	/**
+	 * Allow the JS runtime to load new file types
+	 *
+	 * @param fileExtension File extension that this loader will handle
+	 * @param loader A module loader can either return a string (JS to be evaluated) or an object represeting the module exports
+	 */
+	addModuleLoader(
+		fileExtension: string,
+		loader: (filePath: string) => string | Module
+	) {
+		this.baseModules.set(fileExtension, loader)
+	}
+
+	protected async eval(
+		filePath: string,
+		env: Record<string, any>,
+		fileContent?: string
+	) {
 		const evaluatedModule = this.evaluatedModules.get(filePath)
 		if (evaluatedModule) return evaluatedModule
 
@@ -96,10 +117,10 @@ export abstract class Runtime {
 		try {
 			await this.runSrc(
 				transformedSource,
-				Object.assign({}, this.env, {
+				Object.assign({}, env, {
 					___module: module,
 					___require: (moduleName: string) =>
-						this.require(moduleName, fileDirName),
+						this.require(moduleName, fileDirName, env),
 				})
 			)
 		} catch (err: any) {
@@ -110,7 +131,11 @@ export abstract class Runtime {
 		return module
 	}
 
-	protected async require(moduleName: string, baseDir: string) {
+	protected async require(
+		moduleName: string,
+		baseDir: string,
+		env: Record<string, any>
+	) {
 		const baseModule = this.baseModules.get(moduleName)
 		if (baseModule)
 			return typeof baseModule === 'function'
@@ -121,13 +146,15 @@ export abstract class Runtime {
 		if (moduleName.startsWith('https://')) {
 			const response = await fetch(moduleName)
 			const text = await response.text()
-			return await this.eval(moduleName, text)
+			return await this.eval(moduleName, env, text)
 		}
 
 		if (moduleName.startsWith('.')) moduleName = join(baseDir, moduleName)
 
+		const extension = extname(moduleName)
+
 		// Load JSON files
-		if (moduleName.endsWith('.json')) {
+		if (extension === '.json') {
 			const fileContent = await this.readFile(moduleName).catch(
 				() => undefined
 			)
@@ -141,10 +168,22 @@ export abstract class Runtime {
 					)
 				}
 
-				return <IModule>{
-					__default__: json,
-					...json,
-				}
+				return new Module(json, json)
+			}
+		}
+
+		const customLoader = this.moduleLoaders.get(extension)
+		if (customLoader) {
+			const cachedModule = this.evaluatedModules.get(moduleName)
+			if (cachedModule) return cachedModule
+
+			const module = customLoader(moduleName)
+
+			if (typeof module === 'string') {
+				return await this.eval(moduleName, env, module)
+			} else {
+				this.evaluatedModules.set(moduleName, module)
+				return module
 			}
 		}
 
@@ -157,7 +196,7 @@ export abstract class Runtime {
 			)
 			if (!fileContent) continue
 
-			return await this.eval(filePath, fileContent)
+			return await this.eval(filePath, env, fileContent)
 		}
 		throw new Error(`Module "${moduleName}" not found`)
 	}

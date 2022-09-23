@@ -1,5 +1,5 @@
 import init, { minifySync, transformSync, parseSync } from "@swc/wasm-web";
-import { dirname, basename, join } from "path-browserify";
+import { dirname, basename, join, extname } from "path-browserify";
 import MagicString from "magic-string";
 import json5 from "json5";
 function transform(jsContent, body, offset = 0) {
@@ -60,11 +60,20 @@ const {${allImports.join(", ")}} = await ___require(${node.source.raw});`;
   });
   return jsOutput.toString() + appendExports;
 }
+class Module {
+  constructor(defaultExport, named) {
+    this.__default__ = defaultExport;
+    for (const [key, value] of Object.entries(named)) {
+      this[key] = value;
+    }
+  }
+}
 const isNode = typeof process !== "undefined" && process.release.name === "node";
 class Runtime {
   constructor(modules) {
     this.evaluatedModules = /* @__PURE__ */ new Map();
     this.baseModules = /* @__PURE__ */ new Map();
+    this.moduleLoaders = /* @__PURE__ */ new Map();
     this.env = {};
     if (modules) {
       for (const [moduleName, module] of modules) {
@@ -73,8 +82,7 @@ class Runtime {
     }
   }
   async run(filePath, env = {}, fileContent) {
-    this.env = env;
-    const module = await this.eval(filePath, fileContent);
+    const module = await this.eval(filePath, env, fileContent);
     return module;
   }
   clearCache() {
@@ -86,7 +94,10 @@ class Runtime {
   deleteModule(moduleName) {
     this.baseModules.delete(moduleName);
   }
-  async eval(filePath, fileContent) {
+  addModuleLoader(fileExtension, loader) {
+    this.baseModules.set(fileExtension, loader);
+  }
+  async eval(filePath, env, fileContent) {
     const evaluatedModule = this.evaluatedModules.get(filePath);
     if (evaluatedModule)
       return evaluatedModule;
@@ -119,9 +130,9 @@ class Runtime {
     const transformedSource = transform(transpiledSource, body, transformOffset);
     const module = {};
     try {
-      await this.runSrc(transformedSource, Object.assign({}, this.env, {
+      await this.runSrc(transformedSource, Object.assign({}, env, {
         ___module: module,
-        ___require: (moduleName) => this.require(moduleName, fileDirName)
+        ___require: (moduleName) => this.require(moduleName, fileDirName, env)
       }));
     } catch (err) {
       throw new Error(`Error in ${filePath}: ${err}`);
@@ -129,18 +140,19 @@ class Runtime {
     this.evaluatedModules.set(filePath, module);
     return module;
   }
-  async require(moduleName, baseDir) {
+  async require(moduleName, baseDir, env) {
     const baseModule = this.baseModules.get(moduleName);
     if (baseModule)
       return typeof baseModule === "function" ? await baseModule() : baseModule;
     if (moduleName.startsWith("https://")) {
       const response = await fetch(moduleName);
       const text = await response.text();
-      return await this.eval(moduleName, text);
+      return await this.eval(moduleName, env, text);
     }
     if (moduleName.startsWith("."))
       moduleName = join(baseDir, moduleName);
-    if (moduleName.endsWith(".json")) {
+    const extension = extname(moduleName);
+    if (extension === ".json") {
       const fileContent = await this.readFile(moduleName).catch(() => void 0);
       if (fileContent) {
         let json = {};
@@ -149,10 +161,20 @@ class Runtime {
         } catch {
           throw new Error(`File "${moduleName}" contains invalid JSON`);
         }
-        return {
-          __default__: json,
-          ...json
-        };
+        return new Module(json, json);
+      }
+    }
+    const customLoader = this.moduleLoaders.get(extension);
+    if (customLoader) {
+      const cachedModule = this.evaluatedModules.get(moduleName);
+      if (cachedModule)
+        return cachedModule;
+      const module = customLoader(moduleName);
+      if (typeof module === "string") {
+        return await this.eval(moduleName, env, module);
+      } else {
+        this.evaluatedModules.set(moduleName, module);
+        return module;
       }
     }
     const extensions = [".ts", ".js"];
@@ -161,7 +183,7 @@ class Runtime {
       let fileContent = await this.readFile(filePath).catch(() => void 0);
       if (!fileContent)
         continue;
-      return await this.eval(filePath, fileContent);
+      return await this.eval(filePath, env, fileContent);
     }
     throw new Error(`Module "${moduleName}" not found`);
   }
@@ -175,4 +197,4 @@ let loadedWasm = null;
 function initRuntimes(initUrl) {
   loadedWasm = init(initUrl).then(() => null);
 }
-export { Runtime, initRuntimes, loadedWasm };
+export { Module, Runtime, initRuntimes, loadedWasm };

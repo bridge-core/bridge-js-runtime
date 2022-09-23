@@ -20,6 +20,7 @@ const runner = new MyRunner()
 
 test('Runner.run()', async () => {
 	const module = await runner.run('./examples/test.ts')
+	runner.registerModule('@bridge/generate', { useTemplate: () => 'test' })
 	expect(module).toBeDefined()
 	expect(module.x).toBe(3)
 
@@ -31,5 +32,7 @@ test('Runner.run()', async () => {
 	expect(module2.__default__).toBeTypeOf('function')
 
 	const defaultModule = await runner.run('./examples/default.ts')
-	console.log(defaultModule)
+
+	const scriptedEntity = await runner.run('./examples/scriptedEntity.js')
+	console.log(scriptedEntity)
 })
