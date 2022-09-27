@@ -68,7 +68,7 @@ class Module {
     }
   }
 }
-const isNode = typeof process !== "undefined" && process.release.name === "node";
+const isNode = typeof process !== "undefined" && typeof process.release !== "undefined" && process.release.name === "node";
 class Runtime {
   constructor(modules) {
     this.evaluatedModules = /* @__PURE__ */ new Map();

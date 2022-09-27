@@ -10,7 +10,10 @@ export interface IModule {
 }
 export type TBaseModule = IModule | (() => IModule) | (() => Promise<IModule>)
 
-const isNode = typeof process !== 'undefined' && process.release.name === 'node'
+const isNode =
+	typeof process !== 'undefined' &&
+	typeof process.release !== 'undefined' &&
+	process.release.name === 'node'
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
