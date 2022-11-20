@@ -8,7 +8,11 @@ export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
-export type TBaseModule = IModule | (() => IModule) | (() => Promise<IModule>)
+export type TBaseModule =
+	| string
+	| IModule
+	| (() => IModule)
+	| (() => Promise<IModule>)
 
 const isNode =
 	typeof process !== 'undefined' &&
@@ -19,11 +23,12 @@ export abstract class Runtime {
 	protected baseModules = new Map<string, TBaseModule>()
 	protected moduleLoaders = new Map<
 		string,
-		(filePath: string) => string | Module
+		(filePath: string) => File | Module
 	>()
 
 	protected env: Record<string, any> = {}
-	protected abstract readFile(filePath: string): Promise<string>
+	abstract readFile(filePath: string): Promise<File>
+	// abstract writeToCacheDir(cacheKey: string, content: string): Promise<void>
 
 	constructor(modules?: [string, TBaseModule][]) {
 		if (modules) {
@@ -33,12 +38,8 @@ export abstract class Runtime {
 		}
 	}
 
-	async run(
-		filePath: string,
-		env: Record<string, any> = {},
-		fileContent?: string
-	) {
-		const module = await this.eval(filePath, env, fileContent)
+	async run(filePath: string, env: Record<string, any> = {}, file?: File) {
+		const module = await this.eval(filePath, env, file)
 		return module
 	}
 	clearCache() {
@@ -67,23 +68,51 @@ export abstract class Runtime {
 	protected async eval(
 		filePath: string,
 		env: Record<string, any>,
-		fileContent?: string
+		file?: File
 	) {
 		const evaluatedModule = this.evaluatedModules.get(filePath)
 		if (evaluatedModule) return evaluatedModule
 
 		const fileDirName = dirname(filePath)
-		const syntax = filePath.endsWith('.js') ? 'ecmascript' : 'typescript'
 
-		if (!fileContent)
-			fileContent = await this.readFile(filePath).catch(() => undefined)
-		if (!fileContent) throw new Error(`File "${filePath}" not found`)
+		if (!file) file = await this.readFile(filePath).catch(() => undefined)
+		if (!file) throw new Error(`File "${filePath}" not found`)
+
+		const fileContent = await file.text()
+
+		const transformedSource = await this.transformSource(
+			filePath,
+			fileContent
+		)
+
+		const module: IModule = {}
+
+		try {
+			await this.runSrc(
+				transformedSource,
+				Object.assign({}, env, {
+					___module: module,
+					___require: (moduleName: string) =>
+						this.require(moduleName, fileDirName, env),
+				})
+			)
+		} catch (err: any) {
+			throw new Error(`Error in ${filePath}: ${err}`)
+		}
+
+		this.evaluatedModules.set(filePath, module)
+		return module
+	}
+
+	protected async transformSource(filePath: string, fileContent: string) {
+		const syntax = filePath.endsWith('.js') ? 'ecmascript' : 'typescript'
 
 		if (loadedWasm === null && !isNode) {
 			throw new Error(
 				`You must call initRuntimes() before using the runtime`
 			)
 		}
+
 		await loadedWasm
 
 		let transpiledSource = minifySync(
@@ -109,29 +138,7 @@ export abstract class Runtime {
 		})
 
 		const transformOffset: number = body[0].span.start
-		const transformedSource = transform(
-			transpiledSource,
-			body,
-			transformOffset
-		)
-
-		const module: IModule = {}
-
-		try {
-			await this.runSrc(
-				transformedSource,
-				Object.assign({}, env, {
-					___module: module,
-					___require: (moduleName: string) =>
-						this.require(moduleName, fileDirName, env),
-				})
-			)
-		} catch (err: any) {
-			throw new Error(`Error in ${filePath}: ${err}`)
-		}
-
-		this.evaluatedModules.set(filePath, module)
-		return module
+		return transform(transpiledSource, body, transformOffset)
 	}
 
 	protected async require(
@@ -140,16 +147,22 @@ export abstract class Runtime {
 		env: Record<string, any>
 	) {
 		const baseModule = this.baseModules.get(moduleName)
-		if (baseModule)
-			return typeof baseModule === 'function'
-				? await baseModule()
-				: baseModule
+		if (baseModule) {
+			if (typeof baseModule === 'string') {
+				const file = new File([baseModule], moduleName)
+				return await this.eval(moduleName, env, file)
+			} else if (typeof baseModule === 'function') {
+				return await baseModule()
+			} else {
+				return baseModule
+			}
+		}
 
 		// Fetch module from network
 		if (moduleName.startsWith('https://')) {
 			const response = await fetch(moduleName)
-			const text = await response.text()
-			return await this.eval(moduleName, env, text)
+			const file = new File([await response.blob()], moduleName)
+			return await this.eval(moduleName, env, file)
 		}
 
 		if (moduleName.startsWith('.')) moduleName = join(baseDir, moduleName)
@@ -158,9 +171,9 @@ export abstract class Runtime {
 
 		// Load JSON files
 		if (extension === '.json') {
-			const fileContent = await this.readFile(moduleName).catch(
-				() => undefined
-			)
+			const fileContent = await this.readFile(moduleName)
+				.then((file) => file.text())
+				.catch(() => undefined)
 			if (fileContent) {
 				let json: any = {}
 				try {
@@ -182,11 +195,11 @@ export abstract class Runtime {
 
 			const module = customLoader(moduleName)
 
-			if (typeof module === 'string') {
-				return await this.eval(moduleName, env, module)
-			} else {
+			if (module instanceof Module) {
 				this.evaluatedModules.set(moduleName, module)
 				return module
+			} else {
+				return await this.eval(moduleName, env, module)
 			}
 		}
 

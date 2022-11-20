@@ -81,8 +81,8 @@ class Runtime {
       }
     }
   }
-  async run(filePath, env = {}, fileContent) {
-    const module = await this.eval(filePath, env, fileContent);
+  async run(filePath, env = {}, file) {
+    const module = await this.eval(filePath, env, file);
     return module;
   }
   clearCache() {
@@ -97,16 +97,31 @@ class Runtime {
   addModuleLoader(fileExtension, loader) {
     this.baseModules.set(fileExtension, loader);
   }
-  async eval(filePath, env, fileContent) {
+  async eval(filePath, env, file) {
     const evaluatedModule = this.evaluatedModules.get(filePath);
     if (evaluatedModule)
       return evaluatedModule;
     const fileDirName = dirname(filePath);
-    const syntax = filePath.endsWith(".js") ? "ecmascript" : "typescript";
-    if (!fileContent)
-      fileContent = await this.readFile(filePath).catch(() => void 0);
-    if (!fileContent)
+    if (!file)
+      file = await this.readFile(filePath).catch(() => void 0);
+    if (!file)
       throw new Error(`File "${filePath}" not found`);
+    const fileContent = await file.text();
+    const transformedSource = await this.transformSource(filePath, fileContent);
+    const module = {};
+    try {
+      await this.runSrc(transformedSource, Object.assign({}, env, {
+        ___module: module,
+        ___require: (moduleName) => this.require(moduleName, fileDirName, env)
+      }));
+    } catch (err) {
+      throw new Error(`Error in ${filePath}: ${err}`);
+    }
+    this.evaluatedModules.set(filePath, module);
+    return module;
+  }
+  async transformSource(filePath, fileContent) {
+    const syntax = filePath.endsWith(".js") ? "ecmascript" : "typescript";
     if (loadedWasm === null && !isNode) {
       throw new Error(`You must call initRuntimes() before using the runtime`);
     }
@@ -127,33 +142,30 @@ class Runtime {
       target: "es2022"
     });
     const transformOffset = body[0].span.start;
-    const transformedSource = transform(transpiledSource, body, transformOffset);
-    const module = {};
-    try {
-      await this.runSrc(transformedSource, Object.assign({}, env, {
-        ___module: module,
-        ___require: (moduleName) => this.require(moduleName, fileDirName, env)
-      }));
-    } catch (err) {
-      throw new Error(`Error in ${filePath}: ${err}`);
-    }
-    this.evaluatedModules.set(filePath, module);
-    return module;
+    return transform(transpiledSource, body, transformOffset);
   }
   async require(moduleName, baseDir, env) {
     const baseModule = this.baseModules.get(moduleName);
-    if (baseModule)
-      return typeof baseModule === "function" ? await baseModule() : baseModule;
+    if (baseModule) {
+      if (typeof baseModule === "string") {
+        const file = new File([baseModule], moduleName);
+        return await this.eval(moduleName, env, file);
+      } else if (typeof baseModule === "function") {
+        return await baseModule();
+      } else {
+        return baseModule;
+      }
+    }
     if (moduleName.startsWith("https://")) {
       const response = await fetch(moduleName);
-      const text = await response.text();
-      return await this.eval(moduleName, env, text);
+      const file = new File([await response.blob()], moduleName);
+      return await this.eval(moduleName, env, file);
     }
     if (moduleName.startsWith("."))
       moduleName = join(baseDir, moduleName);
     const extension = extname(moduleName);
     if (extension === ".json") {
-      const fileContent = await this.readFile(moduleName).catch(() => void 0);
+      const fileContent = await this.readFile(moduleName).then((file) => file.text()).catch(() => void 0);
       if (fileContent) {
         let json = {};
         try {
@@ -170,11 +182,11 @@ class Runtime {
       if (cachedModule)
         return cachedModule;
       const module = customLoader(moduleName);
-      if (typeof module === "string") {
-        return await this.eval(moduleName, env, module);
-      } else {
+      if (module instanceof Module) {
         this.evaluatedModules.set(moduleName, module);
         return module;
+      } else {
+        return await this.eval(moduleName, env, module);
       }
     }
     const extensions = [".ts", ".js"];

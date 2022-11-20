@@ -3,20 +3,21 @@ export interface IModule {
     __default__?: any;
     [key: string]: any;
 }
-export declare type TBaseModule = IModule | (() => IModule) | (() => Promise<IModule>);
+export declare type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IModule>);
 export declare abstract class Runtime {
     protected evaluatedModules: Map<string, IModule>;
     protected baseModules: Map<string, TBaseModule>;
-    protected moduleLoaders: Map<string, (filePath: string) => string | Module>;
+    protected moduleLoaders: Map<string, (filePath: string) => File | Module>;
     protected env: Record<string, any>;
-    protected abstract readFile(filePath: string): Promise<string>;
+    abstract readFile(filePath: string): Promise<File>;
     constructor(modules?: [string, TBaseModule][]);
-    run(filePath: string, env?: Record<string, any>, fileContent?: string): Promise<IModule>;
+    run(filePath: string, env?: Record<string, any>, file?: File): Promise<IModule>;
     clearCache(): void;
     registerModule(moduleName: string, module: TBaseModule): void;
     deleteModule(moduleName: string): void;
     addModuleLoader(fileExtension: string, loader: (filePath: string) => string | Module): void;
-    protected eval(filePath: string, env: Record<string, any>, fileContent?: string): Promise<IModule>;
+    protected eval(filePath: string, env: Record<string, any>, file?: File): Promise<IModule>;
+    protected transformSource(filePath: string, fileContent: string): Promise<string>;
     protected require(moduleName: string, baseDir: string, env: Record<string, any>): Promise<IModule>;
     protected runSrc(src: string, env: Record<string, any>): Promise<any>;
 }

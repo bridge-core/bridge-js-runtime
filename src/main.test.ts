@@ -3,8 +3,13 @@ import { readFile } from 'fs/promises'
 import { expect, test } from 'vitest'
 
 class MyRunner extends Runtime {
-	readFile(filePath: string): Promise<string> {
-		return readFile(filePath, { encoding: 'utf8' })
+	// @ts-expect-error File class is not available in node
+	async readFile(filePath: string) {
+		const fileContent = await readFile(filePath, { encoding: 'utf8' })
+
+		return {
+			text: () => fileContent,
+		}
 	}
 	async fileExists(filePath: string): Promise<boolean> {
 		try {
