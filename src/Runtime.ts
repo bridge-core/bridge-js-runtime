@@ -38,7 +38,15 @@ export abstract class Runtime {
 		}
 	}
 
-	async run(filePath: string, env: Record<string, any> = {}, file?: File) {
+	async run(
+		filePath: string,
+		env: Record<string, any> = {},
+		file?: File | string
+	) {
+		if (typeof file === 'string') {
+			file = new File([file], basename(filePath))
+		}
+
 		const module = await this.eval(filePath, env, file)
 		return module
 	}

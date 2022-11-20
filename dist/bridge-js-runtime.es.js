@@ -1,5 +1,5 @@
 import init, { minifySync, transformSync, parseSync } from "@swc/wasm-web";
-import { dirname, basename, join, extname } from "path-browserify";
+import { basename, dirname, join, extname } from "path-browserify";
 import MagicString from "magic-string";
 import json5 from "json5";
 function transform(jsContent, body, offset = 0) {
@@ -82,6 +82,9 @@ class Runtime {
     }
   }
   async run(filePath, env = {}, file) {
+    if (typeof file === "string") {
+      file = new File([file], basename(filePath));
+    }
     const module = await this.eval(filePath, env, file);
     return module;
   }

@@ -11,7 +11,7 @@ export declare abstract class Runtime {
     protected env: Record<string, any>;
     abstract readFile(filePath: string): Promise<File>;
     constructor(modules?: [string, TBaseModule][]);
-    run(filePath: string, env?: Record<string, any>, file?: File): Promise<IModule>;
+    run(filePath: string, env?: Record<string, any>, file?: File | string): Promise<IModule>;
     clearCache(): void;
     registerModule(moduleName: string, module: TBaseModule): void;
     deleteModule(moduleName: string): void;
