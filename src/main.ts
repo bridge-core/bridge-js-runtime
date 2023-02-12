@@ -4,6 +4,6 @@ export { Runtime } from './Runtime'
 export { Module } from './Module'
 
 export let loadedWasm: Promise<null> | null = null
-export function initRuntimes(initUrl?: string) {
+export function initRuntimes(initUrl?: string | BufferSource) {
 	loadedWasm = init(initUrl).then(() => null)
 }
