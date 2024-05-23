@@ -1,6 +1,6 @@
 {
 	"name": "@bridge-editor/js-runtime",
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"description": "Package used by bridge. to execute JavaScript files with ESM syntax",
 	"scripts": {
 		"test": "vitest",

@@ -9,13 +9,31 @@ function transform(jsContent, body, offset = 0) {
   let appendExports = "";
   body.forEach((node) => {
     if (node.type === "ExportDefaultDeclaration") {
-      overwrite(node.span.start, node.span.end, `
-___module.__default__ = ${from(node.decl.span.start, node.decl.span.end)};`);
+      overwrite(
+        node.span.start,
+        node.span.end,
+        `
+___module.__default__ = ${from(
+          node.decl.span.start,
+          node.decl.span.end
+        )};`
+      );
     } else if (node.type === "ExportDefaultExpression") {
-      overwrite(node.span.start, node.span.end, `
-___module.__default__ = ${from(node.expression.span.start, node.expression.span.end)};`);
+      overwrite(
+        node.span.start,
+        node.span.end,
+        `
+___module.__default__ = ${from(
+          node.expression.span.start,
+          node.expression.span.end
+        )};`
+      );
     } else if (node.type === "ExportDeclaration") {
-      overwrite(node.span.start, node.span.end, from(node.declaration.span.start, node.declaration.span.end));
+      overwrite(
+        node.span.start,
+        node.span.end,
+        from(node.declaration.span.start, node.declaration.span.end)
+      );
       if (node.declaration.type === "ClassDeclaration" || node.declaration.type === "FunctionDeclaration") {
         appendExports += `
 ___module.${node.declaration.identifier.value} = ${node.declaration.identifier.value};`;
@@ -38,8 +56,12 @@ ___module.${exported.value} = ${orig.value};`;
       overwrite(node.span.start, node.span.end, newExports);
     } else if (node.type === "ImportDeclaration") {
       if (node.specifiers.length === 1 && node.specifiers[0].type === "ImportNamespaceSpecifier") {
-        overwrite(node.span.start, node.span.end, `
-const ${node.specifiers[0].local.value} = await ___require(${node.source.raw});`);
+        overwrite(
+          node.span.start,
+          node.span.end,
+          `
+const ${node.specifiers[0].local.value} = await ___require(${node.source.raw});`
+        );
       } else {
         const allImports = [];
         node.specifiers.forEach((specifier) => {
@@ -48,12 +70,16 @@ const ${node.specifiers[0].local.value} = await ___require(${node.source.raw});`
           } else if (specifier.type === "ImportSpecifier") {
             if (!specifier.imported)
               specifier.imported = specifier.local;
-            allImports.push(`${specifier.imported.value}: ${specifier.local.value}`);
+            allImports.push(
+              `${specifier.imported.value}: ${specifier.local.value}`
+            );
           }
         });
         const importText = allImports.length === 0 ? `
 await ___require(${node.source.raw});` : `
-const {${allImports.join(", ")}} = await ___require(${node.source.raw});`;
+const {${allImports.join(
+          ", "
+        )}} = await ___require(${node.source.raw});`;
         overwrite(node.span.start, node.span.end, importText);
       }
     }
@@ -110,13 +136,19 @@ class Runtime {
     if (!file)
       throw new Error(`File "${filePath}" not found`);
     const fileContent = await file.text();
-    const transformedSource = await this.transformSource(filePath, fileContent);
+    const transformedSource = await this.transformSource(
+      filePath,
+      fileContent
+    );
     const module = {};
     try {
-      await this.runSrc(transformedSource, Object.assign({}, env, {
-        ___module: module,
-        ___require: (moduleName) => this.require(moduleName, fileDirName, env)
-      }));
+      await this.runSrc(
+        transformedSource,
+        Object.assign({}, env, {
+          ___module: module,
+          ___require: (moduleName) => this.require(moduleName, fileDirName, env)
+        })
+      );
     } catch (err) {
       throw new Error(`Error in ${filePath}: ${err}`);
     }
@@ -126,20 +158,25 @@ class Runtime {
   async transformSource(filePath, fileContent) {
     const syntax = filePath.endsWith(".js") ? "ecmascript" : "typescript";
     if (loadedWasm === null && !isNode) {
-      throw new Error(`You must call initRuntimes() before using the runtime`);
+      throw new Error(
+        `You must call initRuntimes() before using the runtime`
+      );
     }
     await loadedWasm;
-    let transpiledSource = minifySync(transformSync(fileContent, {
-      filename: basename(filePath),
-      jsc: {
-        parser: {
-          syntax,
-          preserveAllComments: false,
-          topLevelAwait: true
-        },
-        target: "es2020"
-      }
-    }).code, { compress: false, mangle: false, format: { beautify: true } }).code;
+    let transpiledSource = minifySync(
+      transformSync(fileContent, {
+        filename: basename(filePath),
+        jsc: {
+          parser: {
+            syntax,
+            preserveAllComments: false,
+            topLevelAwait: true
+          },
+          target: "es2020"
+        }
+      }).code,
+      { compress: false, mangle: false, format: { beautify: true } }
+    ).code;
     const { type, body } = parseSync(transpiledSource, {
       syntax,
       target: "es2022"
@@ -174,7 +211,9 @@ class Runtime {
         try {
           json = json5.parse(fileContent);
         } catch {
-          throw new Error(`File "${moduleName}" contains invalid JSON`);
+          throw new Error(
+            `File "${moduleName}" contains invalid JSON`
+          );
         }
         return new Module(json, json);
       }
@@ -195,7 +234,9 @@ class Runtime {
     const extensions = [".ts", ".js"];
     for (const ext of extensions) {
       const filePath = `${moduleName}${ext}`;
-      let fileContent = await this.readFile(filePath).catch(() => void 0);
+      let fileContent = await this.readFile(filePath).catch(
+        () => void 0
+      );
       if (!fileContent)
         continue;
       return await this.eval(filePath, env, fileContent);
@@ -203,9 +244,12 @@ class Runtime {
     throw new Error(`Module "${moduleName}" not found`);
   }
   async runSrc(src, env) {
-    return new Function(...Object.keys(env), `return (async () => {
+    return new Function(
+      ...Object.keys(env),
+      `return (async () => {
 ${src}
-})()`)(...Object.values(env));
+})()`
+    )(...Object.values(env));
   }
 }
 let loadedWasm = null;

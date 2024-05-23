@@ -3,7 +3,7 @@ export interface IModule {
     __default__?: any;
     [key: string]: any;
 }
-export declare type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IModule>);
+export type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IModule>);
 export declare abstract class Runtime {
     protected evaluatedModules: Map<string, IModule>;
     protected baseModules: Map<string, TBaseModule>;

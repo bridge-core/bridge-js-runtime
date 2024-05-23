@@ -20,7 +20,8 @@
 		/* Additional Checks */
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
-		"types": ["vite/client", "@types/node"]
+		"types": ["vite/client", "@types/node"],
+		"skipLibCheck": true
 	},
 	"include": ["./src/**/*.ts"]
 }
