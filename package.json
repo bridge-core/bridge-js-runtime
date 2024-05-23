@@ -1,7 +1,7 @@
 {
-	"name": "bridge-js-runtime",
+	"name": "@bridge-editor/js-runtime",
 	"version": "0.4.2",
-	"description": "A fast compiler for Minecraft Add-Ons",
+	"description": "Package used by bridge. to execute JavaScript files with ESM syntax",
 	"scripts": {
 		"test": "vitest",
 		"build:types": "tsc --project tsconfig.json",
@@ -19,14 +19,20 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bridge-core/bridge-sandbox.git"
+		"url": "git+https://github.com/bridge-core/bridge-js-runtime.git"
 	},
 	"author": "solvedDev",
+	"contributors": [
+		{
+			"name": "Thomas Orsbourne",
+			"email": "thomas@gamemodeone.com"
+		}
+	],
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/bridge-core/bridge-sandbox/issues"
+		"url": "https://github.com/bridge-core/bridge-js-runtime/issues"
 	},
-	"homepage": "https://github.com/bridge-core/bridge-sandbox#readme",
+	"homepage": "https://github.com/bridge-core/bridge-js-runtime#readme",
 	"dependencies": {
 		"@swc/wasm-web": "^1.2.218",
 		"json5": "^2.2.1",
