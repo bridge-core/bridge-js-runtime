@@ -158,7 +158,6 @@ class Runtime {
       throw new Error(`You must call initRuntimes() before using the runtime`);
     }
     await loadedWasm;
-    console.log("Custom Minify!");
     let transpiledSource = minifySync(
       transformSync(fileContent, {
         filename: basename(filePath),
