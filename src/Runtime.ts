@@ -99,8 +99,6 @@ export abstract class Runtime {
 
 		await loadedWasm
 
-		console.log('Custom Minify!')
-
 		let transpiledSource = minifySync(
 			transformSync(fileContent, {
 				filename: basename(filePath),
