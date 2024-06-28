@@ -34,7 +34,7 @@
 	},
 	"homepage": "https://github.com/bridge-core/bridge-js-runtime#readme",
 	"dependencies": {
-		"@swc/wasm-web": "^1.2.218",
+		"@swc/wasm-web": "^1.6.5",
 		"json5": "^2.2.1",
 		"magic-string": "^0.26.2",
 		"path-browserify": "^1.0.1",

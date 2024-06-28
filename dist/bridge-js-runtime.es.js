@@ -136,10 +136,7 @@ class Runtime {
     if (!file)
       throw new Error(`File "${filePath}" not found`);
     const fileContent = await file.text();
-    const transformedSource = await this.transformSource(
-      filePath,
-      fileContent
-    );
+    const transformedSource = await this.transformSource(filePath, fileContent);
     const module = {};
     try {
       await this.runSrc(
@@ -158,24 +155,24 @@ class Runtime {
   async transformSource(filePath, fileContent) {
     const syntax = filePath.endsWith(".js") ? "ecmascript" : "typescript";
     if (loadedWasm === null && !isNode) {
-      throw new Error(
-        `You must call initRuntimes() before using the runtime`
-      );
+      throw new Error(`You must call initRuntimes() before using the runtime`);
     }
     await loadedWasm;
+    console.log("Custom Minify!");
     let transpiledSource = minifySync(
       transformSync(fileContent, {
         filename: basename(filePath),
         jsc: {
           parser: {
             syntax,
-            preserveAllComments: false,
             topLevelAwait: true
           },
+          preserveAllComments: false,
           target: "es2020"
-        }
+        },
+        isModule: true
       }).code,
-      { compress: false, mangle: false, format: { beautify: true } }
+      { compress: false, mangle: false, format: { beautify: true }, module: true }
     ).code;
     const { type, body } = parseSync(transpiledSource, {
       syntax,
@@ -211,9 +208,7 @@ class Runtime {
         try {
           json = json5.parse(fileContent);
         } catch {
-          throw new Error(
-            `File "${moduleName}" contains invalid JSON`
-          );
+          throw new Error(`File "${moduleName}" contains invalid JSON`);
         }
         return new Module(json, json);
       }
@@ -234,9 +229,7 @@ class Runtime {
     const extensions = [".ts", ".js"];
     for (const ext of extensions) {
       const filePath = `${moduleName}${ext}`;
-      let fileContent = await this.readFile(filePath).catch(
-        () => void 0
-      );
+      let fileContent = await this.readFile(filePath).catch(() => void 0);
       if (!fileContent)
         continue;
       return await this.eval(filePath, env, fileContent);
@@ -244,12 +237,11 @@ class Runtime {
     throw new Error(`Module "${moduleName}" not found`);
   }
   async runSrc(src, env) {
-    return new Function(
-      ...Object.keys(env),
-      `return (async () => {
+    return new Function(...Object.keys(env), `return (async () => {
 ${src}
-})()`
-    )(...Object.values(env));
+})()`)(
+      ...Object.values(env)
+    );
   }
 }
 let loadedWasm = null;

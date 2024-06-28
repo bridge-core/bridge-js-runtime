@@ -8,11 +8,7 @@ export interface IModule {
 	__default__?: any
 	[key: string]: any
 }
-export type TBaseModule =
-	| string
-	| IModule
-	| (() => IModule)
-	| (() => Promise<IModule>)
+export type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IModule>)
 
 const isNode =
 	typeof process !== 'undefined' &&
@@ -21,10 +17,7 @@ const isNode =
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
-	protected moduleLoaders = new Map<
-		string,
-		(filePath: string) => File | Module
-	>()
+	protected moduleLoaders = new Map<string, (filePath: string) => File | Module>()
 
 	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<File>
@@ -38,11 +31,7 @@ export abstract class Runtime {
 		}
 	}
 
-	async run(
-		filePath: string,
-		env: Record<string, any> = {},
-		file?: File | string
-	) {
+	async run(filePath: string, env: Record<string, any> = {}, file?: File | string) {
 		if (typeof file === 'string') {
 			file = new File([file], basename(filePath))
 		}
@@ -66,18 +55,11 @@ export abstract class Runtime {
 	 * @param fileExtension File extension that this loader will handle
 	 * @param loader A module loader can either return a string (JS to be evaluated) or an object represeting the module exports
 	 */
-	addModuleLoader(
-		fileExtension: string,
-		loader: (filePath: string) => string | Module
-	) {
+	addModuleLoader(fileExtension: string, loader: (filePath: string) => string | Module) {
 		this.baseModules.set(fileExtension, loader)
 	}
 
-	protected async eval(
-		filePath: string,
-		env: Record<string, any>,
-		file?: File
-	) {
+	protected async eval(filePath: string, env: Record<string, any>, file?: File) {
 		const evaluatedModule = this.evaluatedModules.get(filePath)
 		if (evaluatedModule) return evaluatedModule
 
@@ -88,10 +70,7 @@ export abstract class Runtime {
 
 		const fileContent = await file.text()
 
-		const transformedSource = await this.transformSource(
-			filePath,
-			fileContent
-		)
+		const transformedSource = await this.transformSource(filePath, fileContent)
 
 		const module: IModule = {}
 
@@ -100,8 +79,7 @@ export abstract class Runtime {
 				transformedSource,
 				Object.assign({}, env, {
 					___module: module,
-					___require: (moduleName: string) =>
-						this.require(moduleName, fileDirName, env),
+					___require: (moduleName: string) => this.require(moduleName, fileDirName, env),
 				})
 			)
 		} catch (err: any) {
@@ -116,12 +94,12 @@ export abstract class Runtime {
 		const syntax = filePath.endsWith('.js') ? 'ecmascript' : 'typescript'
 
 		if (loadedWasm === null && !isNode) {
-			throw new Error(
-				`You must call initRuntimes() before using the runtime`
-			)
+			throw new Error(`You must call initRuntimes() before using the runtime`)
 		}
 
 		await loadedWasm
+
+		console.log('Custom Minify!')
 
 		let transpiledSource = minifySync(
 			transformSync(fileContent, {
@@ -130,13 +108,15 @@ export abstract class Runtime {
 				jsc: {
 					parser: {
 						syntax,
-						preserveAllComments: false,
 						topLevelAwait: true,
 					},
+					preserveAllComments: false,
 					target: 'es2020',
 				},
+
+				isModule: true,
 			}).code,
-			{ compress: false, mangle: false, format: { beautify: true } }
+			{ compress: false, mangle: false, format: { beautify: true }, module: true }
 		).code
 
 		const { type, body } = parseSync(transpiledSource, {
@@ -149,11 +129,7 @@ export abstract class Runtime {
 		return transform(transpiledSource, body, transformOffset)
 	}
 
-	protected async require(
-		moduleName: string,
-		baseDir: string,
-		env: Record<string, any>
-	) {
+	protected async require(moduleName: string, baseDir: string, env: Record<string, any>) {
 		const baseModule = this.baseModules.get(moduleName)
 		if (baseModule) {
 			if (typeof baseModule === 'string') {
@@ -180,16 +156,14 @@ export abstract class Runtime {
 		// Load JSON files
 		if (extension === '.json') {
 			const fileContent = await this.readFile(moduleName)
-				.then((file) => file.text())
+				.then(file => file.text())
 				.catch(() => undefined)
 			if (fileContent) {
 				let json: any = {}
 				try {
 					json = json5.parse(fileContent)
 				} catch {
-					throw new Error(
-						`File "${moduleName}" contains invalid JSON`
-					)
+					throw new Error(`File "${moduleName}" contains invalid JSON`)
 				}
 
 				return new Module(json, json)
@@ -215,9 +189,7 @@ export abstract class Runtime {
 
 		for (const ext of extensions) {
 			const filePath = `${moduleName}${ext}`
-			let fileContent = await this.readFile(filePath).catch(
-				() => undefined
-			)
+			let fileContent = await this.readFile(filePath).catch(() => undefined)
 			if (!fileContent) continue
 
 			return await this.eval(filePath, env, fileContent)
@@ -226,9 +198,8 @@ export abstract class Runtime {
 	}
 
 	protected async runSrc(src: string, env: Record<string, any>) {
-		return new Function(
-			...Object.keys(env),
-			`return (async () => {\n${src}\n})()`
-		)(...Object.values(env))
+		return new Function(...Object.keys(env), `return (async () => {\n${src}\n})()`)(
+			...Object.values(env)
+		)
 	}
 }
