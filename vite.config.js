@@ -11,7 +11,7 @@ export default defineConfig({
 		assetsInlineLimit: 0,
 		rollupOptions: {
 			external: [
-				'path-browserify',
+				'pathe',
 				'@swc/wasm-web',
 				'magic-string',
 				'json5',

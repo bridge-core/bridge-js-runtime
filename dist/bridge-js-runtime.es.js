@@ -1,5 +1,5 @@
 import init, { minifySync, transformSync, parseSync } from "@swc/wasm-web";
-import { basename, dirname, join, extname } from "path-browserify";
+import { basename, dirname, join, extname } from "pathe";
 import MagicString from "magic-string";
 import json5 from "json5";
 function transform(jsContent, body, offset = 0) {

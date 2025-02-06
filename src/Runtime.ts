@@ -1,5 +1,5 @@
 import { minifySync, parseSync, transformSync } from '@swc/wasm-web'
-import { dirname, join, basename, extname } from 'path-browserify'
+import { dirname, join, basename, extname } from 'pathe'
 import { transform } from './Transform/main'
 import { loadedWasm } from './main'
 import json5 from 'json5'
