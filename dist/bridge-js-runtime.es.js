@@ -225,7 +225,7 @@ class Runtime {
         return await this.eval(moduleName, env, module);
       }
     }
-    const extensions = [".ts", ".js"];
+    const extensions = [".ts", ".js", ""];
     for (const ext of extensions) {
       const filePath = `${moduleName}${ext}`;
       let fileContent = await this.readFile(filePath).catch(() => void 0);
@@ -238,9 +238,7 @@ class Runtime {
   async runSrc(src, env) {
     return new Function(...Object.keys(env), `return (async () => {
 ${src}
-})()`)(
-      ...Object.values(env)
-    );
+})()`)(...Object.values(env));
   }
 }
 let loadedWasm = null;
