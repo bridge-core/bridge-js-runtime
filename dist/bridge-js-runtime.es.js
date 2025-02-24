@@ -217,7 +217,7 @@ class Runtime {
       const cachedModule = this.evaluatedModules.get(moduleName);
       if (cachedModule)
         return cachedModule;
-      const module = customLoader(moduleName);
+      const module = await customLoader(moduleName);
       if (module instanceof Module) {
         this.evaluatedModules.set(moduleName, module);
         return module;
