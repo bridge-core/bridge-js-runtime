@@ -14,7 +14,7 @@ const isNode = typeof process !== 'undefined' && typeof process.release !== 'und
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
-	protected moduleLoaders = new Map<string, (filePath: string) => File | Module>()
+	protected moduleLoaders = new Map<string, (filePath: string) => (File | Module) | Promise<File | Module>>()
 
 	protected env: Record<string, any> = {}
 	abstract readFile(filePath: string): Promise<File>
@@ -170,7 +170,7 @@ export abstract class Runtime {
 			const cachedModule = this.evaluatedModules.get(moduleName)
 			if (cachedModule) return cachedModule
 
-			const module = customLoader(moduleName)
+			const module = await customLoader(moduleName)
 
 			if (module instanceof Module) {
 				this.evaluatedModules.set(moduleName, module)

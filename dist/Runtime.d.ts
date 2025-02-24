@@ -7,7 +7,7 @@ export type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IM
 export declare abstract class Runtime {
     protected evaluatedModules: Map<string, IModule>;
     protected baseModules: Map<string, TBaseModule>;
-    protected moduleLoaders: Map<string, (filePath: string) => File | Module>;
+    protected moduleLoaders: Map<string, (filePath: string) => (File | Module) | Promise<File | Module>>;
     protected env: Record<string, any>;
     abstract readFile(filePath: string): Promise<File>;
     constructor(modules?: [string, TBaseModule][]);
