@@ -10,10 +10,7 @@ export interface IModule {
 }
 export type TBaseModule = string | IModule | (() => IModule) | (() => Promise<IModule>)
 
-const isNode =
-	typeof process !== 'undefined' &&
-	typeof process.release !== 'undefined' &&
-	process.release.name === 'node'
+const isNode = typeof process !== 'undefined' && typeof process.release !== 'undefined' && process.release.name === 'node'
 export abstract class Runtime {
 	protected evaluatedModules = new Map<string, IModule>()
 	protected baseModules = new Map<string, TBaseModule>()
@@ -183,7 +180,7 @@ export abstract class Runtime {
 			}
 		}
 
-		const extensions = ['.ts', '.js']
+		const extensions = ['.ts', '.js', '']
 
 		for (const ext of extensions) {
 			const filePath = `${moduleName}${ext}`
@@ -196,8 +193,6 @@ export abstract class Runtime {
 	}
 
 	protected async runSrc(src: string, env: Record<string, any>) {
-		return new Function(...Object.keys(env), `return (async () => {\n${src}\n})()`)(
-			...Object.values(env)
-		)
+		return new Function(...Object.keys(env), `return (async () => {\n${src}\n})()`)(...Object.values(env))
 	}
 }
